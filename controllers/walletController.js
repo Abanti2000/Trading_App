@@ -28,7 +28,7 @@ const rechargeWallet = async (req, res) => {
     });
 
     res.json({
-      message: "✅ Wallet recharged successfully",
+      message: " Wallet recharged successfully",
       walletBalance: user.walletBalance,
     });
   } catch (err) {

@@ -32,7 +32,7 @@ const teamMemberSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-// ✅ Compound unique index: prevent duplicate member per team
+//  Compound unique index: prevent duplicate member per team
 teamMemberSchema.index({ userId: 1, team: 1 }, { unique: true });
 
 module.exports = mongoose.model('TeamMember', teamMemberSchema);

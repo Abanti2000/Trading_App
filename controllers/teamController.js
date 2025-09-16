@@ -125,10 +125,10 @@ const getTeamOverview = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // 1️⃣ Get all teams created by this user
+    // 1 Get all teams created by this user
     const teams = await Team.find({ createdBy: userId });
 
-    // 2️⃣ Get aggregated member stats
+    // 2 Get aggregated member stats
     const memberStats = await TeamMember.aggregate([
       { 
         $match: { 
@@ -147,13 +147,13 @@ const getTeamOverview = async (req, res) => {
       }
     ]);
 
-    // 3️⃣ Map stats by teamId
+    // 3 Map stats by teamId
     const statsMap = {};
     memberStats.forEach(s => {
       if (s._id) statsMap[s._id.toString()] = s;
     });
 
-    // 4️⃣ Build overview
+    // 4 Build overview
     const overview = teams.map(team => {
       const stats = statsMap[team._id.toString()] || {};
       return {

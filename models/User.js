@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
 
   walletBalance: { type: Number, default: 0 },                    // default 0 balance
 
-  // 🔹 Team & Referral System
+  //  Team & Referral System
   referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // kisne invite kiya
   referrals: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // kis-kis ko invite kiya
 

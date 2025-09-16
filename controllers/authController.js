@@ -26,7 +26,7 @@ const generateOtp = async (req, res) => {
 
     await user.save();
 
-    console.log(`✅ OTP for ${mobileNumber}: ${otp}`);
+    console.log(` OTP for ${mobileNumber}: ${otp}`);
 
     res.json({ message: "OTP generated successfully", otp });
   } catch (err) {
@@ -53,7 +53,7 @@ const generateTradePasswordOtp = async (req, res) => {
     user.otpExpires = otpExpires;
     await user.save();
 
-    console.log(`✅ Trade Password OTP for ${mobileNumber}: ${otp}`);
+    console.log(` Trade Password OTP for ${mobileNumber}: ${otp}`);
 
     res.json({ message: "OTP generated successfully", otp }); // ⚠️ dev mode me otp send
   } catch (err) {
@@ -91,7 +91,7 @@ const register = async (req, res) => {
 
     await user.save();
 
-    res.json({ message: "✅ Registration successful" });
+    res.json({ message: " Registration successful" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -127,7 +127,7 @@ const login = async (req, res) => {
 
     // Return success response with token
     res.json({
-      message: "✅ Login successful",
+      message: " Login successful",
       token,
       user: {
         id: user._id,
@@ -178,7 +178,7 @@ const setTradePassword = async (req, res) => {
 
     await user.save();
 
-    res.json({ message: "✅ Trade password set successfully" });
+    res.json({ message: " Trade password set successfully" });
   } catch (err) {
     console.error("Trade password error:", err);
     res.status(500).json({ error: err.message });

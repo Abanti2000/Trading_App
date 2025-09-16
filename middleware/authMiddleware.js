@@ -12,7 +12,7 @@ const authMiddleware = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // ✅ Normalized object
+    //  Normalized object
     req.user = {
       id: decoded.id,
       mobileNumber: decoded.mobileNumber || decoded.mobile, // dono handle

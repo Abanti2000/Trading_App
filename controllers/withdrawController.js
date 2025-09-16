@@ -2,7 +2,7 @@ const User = require("../models/User");
 const Transaction = require("../models/Transaction");
 const bcrypt = require("bcryptjs");
 
-// ✅ 1. Get Withdrawal Balance
+//  1. Get Withdrawal Balance
 const getBalance = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -16,7 +16,7 @@ const getBalance = async (req, res) => {
   }
 };
 
-// ✅ 2. Request Withdrawal
+//  2. Request Withdrawal
 const requestWithdrawal = async (req, res) => {
   try {
     const { amount, tradePassword, bankCard } = req.body;
@@ -63,7 +63,7 @@ const requestWithdrawal = async (req, res) => {
 
 
 
-// ✅ 3. Withdrawal Records
+//  3. Withdrawal Records
 const getWithdrawalRecords = async (req, res) => {
   try {
     const records = await Transaction.find({ userId: req.user.id, type: "withdraw" }).sort({ createdAt: -1 });

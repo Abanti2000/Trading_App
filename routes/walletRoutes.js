@@ -4,10 +4,10 @@ const User = require("../models/User");
 const auth = require("../middleware/authMiddleware"); //  token verification middleware
 const { rechargeWallet } = require("../controllers/walletController");
 
-// ✅ Recharge Wallet
+//  Recharge Wallet
 router.post("/recharge", auth, rechargeWallet);
 
-// ✅ Get Wallet Balance
+//  Get Wallet Balance
 router.get("/balance", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id); // user id JWT se aayegi
