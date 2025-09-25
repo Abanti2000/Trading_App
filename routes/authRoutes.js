@@ -8,7 +8,8 @@ const {
   login, 
   setTradePassword, 
   generateOtp,
-  generateTradePasswordOtp
+  generateTradePasswordOtp,
+    getInvitation
 } = require("../controllers/authController");
 
 // Routes
@@ -17,6 +18,7 @@ router.post("/login", login);
 router.post("/generate-otp", generateOtp);
 router.post("/generate-trade-otp", generateTradePasswordOtp);
 router.post("/set-trade-password", authMiddleware, setTradePassword);
+
 
 
 module.exports = router;

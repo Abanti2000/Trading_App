@@ -25,19 +25,40 @@ const getUserTeams = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
+// Get team members with masked mobile, status, and joined date
 
-// Get team members with team name
 const getTeamMembers = async (req, res) => {
   try {
-    const members = await TeamMember.find({ team: req.params.teamId })
-      .populate("team", "name"); // sirf name field populate hogi
+    const teamId = req.params.teamId;
 
-    res.json({ success: true, data: members });
+    const members = await TeamMember.find({ team: teamId })
+      .populate("team", "name");
+
+    // Referral calculation
+    const totalReferrals = members.length;
+    const validReferrals = members.filter(m => m.status === "active").length;
+
+    const formatted = members.map(m => ({
+      mobile: m.mobileNumber.replace(/(\d{2})\d+(\d{2})/, "$1*****$2"), // mask mobile
+      joinedAt: m.createdAt,  // format frontend pe kar lena
+      status: m.status === "active" ? "Active" : "Not Active",
+      recharge: m.rechargeAmount || 0,
+      commission: m.commission || 0
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        referral: `${validReferrals}/${totalReferrals}`, // 👈 yeh upar dikhane ke liye
+        members: formatted
+      }
+    });
   } catch (err) {
     console.error("Get Team Members Error:", err);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
+
 
 // Join a Team (self-join, role optional)
 const joinTeam = async (req, res) => {
@@ -121,57 +142,145 @@ const addTeamMember = async (req, res) => {
 };
 
 // Get team overview (all teams of the user)
+// const getTeamOverview = async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+
+//     // 1 Get all teams created by this user
+//     const teams = await Team.find({ createdBy: userId });
+
+//     // 2 Get aggregated member stats
+//     const memberStats = await TeamMember.aggregate([
+//       { 
+//         $match: { 
+//           userId: new mongoose.Types.ObjectId(userId),
+//           team: { $ne: null }
+//         } 
+//       },
+//       {
+//         $group: {
+//           _id: "$team",
+//           totalRecharge: { $sum: "$rechargeAmount" },
+//           myCommission: { $sum: "$commission" },
+//           validReferrals: { $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] } },
+//           totalReferrals: { $sum: 1 }
+//         }
+//       }
+//     ]);
+
+//     // 3 Map stats by teamId
+//     const statsMap = {};
+//     memberStats.forEach(s => {
+//       if (s._id) statsMap[s._id.toString()] = s;
+//     });
+
+//     // 4 Build overview
+//     const overview = teams.map(team => {
+//       const stats = statsMap[team._id.toString()] || {};
+//       return {
+//         teamName: team.name,
+//         totalRecharge: stats.totalRecharge || 0,
+//         myCommission: stats.myCommission || 0,
+//         referral: stats.validReferrals != null && stats.totalReferrals != null
+//           ? `${stats.validReferrals}/${stats.totalReferrals}`
+//           : "0/0"
+//       };
+//     });
+
+//     res.json({ success: true, data: overview });
+//   } catch (err) {
+//     console.error("Overview Error:", err);
+//     res.status(500).json({ success: false, message: "Server Error" });
+//   }
+// };
+
+
+
+
 const getTeamOverview = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { teamId } = req.params;
 
-    // 1 Get all teams created by this user
-    const teams = await Team.find({ createdBy: userId });
+    // 1. Get teams (all or a single team)
+    let teamFilter = { createdBy: userId };
+    if (teamId) teamFilter._id = teamId;
 
-    // 2 Get aggregated member stats
-    const memberStats = await TeamMember.aggregate([
-      { 
-        $match: { 
-          userId: new mongoose.Types.ObjectId(userId),
-          team: { $ne: null }
-        } 
-      },
+    const teams = await Team.find(teamFilter);
+    const teamIds = teams.map(t => t._id);
+
+    // 2. Aggregate team stats: total recharge & members
+    const teamStats = await TeamMember.aggregate([
+      { $match: { team: { $in: teamIds } } },
       {
         $group: {
           _id: "$team",
           totalRecharge: { $sum: "$rechargeAmount" },
-          myCommission: { $sum: "$commission" },
-          validReferrals: { $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] } },
-          totalReferrals: { $sum: 1 }
+          totalMembers: { $sum: 1 },
+          activeMembers: { $sum: { $cond: [{ $gt: ["$rechargeAmount", 0] }, 1, 0] } }
         }
       }
     ]);
 
-    // 3 Map stats by teamId
+    // Map stats by teamId
     const statsMap = {};
-    memberStats.forEach(s => {
-      if (s._id) statsMap[s._id.toString()] = s;
+    teamStats.forEach(s => {
+      statsMap[s._id.toString()] = s;
     });
 
-    // 4 Build overview
+    // 3. Aggregate current user’s commission per team
+    const myCommissions = await TeamMember.aggregate([
+      { $match: { team: { $in: teamIds }, userId: new mongoose.Types.ObjectId(userId) } },
+      {
+        $group: {
+          _id: "$team",
+          myCommission: { $sum: "$commission" }
+        }
+      }
+    ]);
+
+    const myCommissionMap = {};
+    myCommissions.forEach(c => {
+      myCommissionMap[c._id.toString()] = c.myCommission;
+    });
+
+    // 4. Build overview ensuring referral is always included
     const overview = teams.map(team => {
       const stats = statsMap[team._id.toString()] || {};
+      const totalRecharge = stats.totalRecharge || 0;
+      const myCommission = myCommissionMap[team._id.toString()] || 0;
+
+      const totalMembers = stats.totalMembers != null ? stats.totalMembers : 3; // default 3 members
+      const activeMembers = stats.activeMembers != null ? stats.activeMembers : 0;
+
       return {
         teamName: team.name,
-        totalRecharge: stats.totalRecharge || 0,
-        myCommission: stats.myCommission || 0,
-        referral: stats.validReferrals != null && stats.totalReferrals != null
-          ? `${stats.validReferrals}/${stats.totalReferrals}`
-          : "0/0"
+        totalRecharge,
+        myCommission,
+        referral: `${activeMembers}/${totalMembers}`,
+        commissionRate: totalRecharge > 0 ? ((myCommission / totalRecharge) * 100).toFixed(2) + "%" : "0%"
       };
     });
 
-    res.json({ success: true, data: overview });
+    // 5. Summary – total commission rate
+    const totalRechargeSum = teamStats.reduce((acc, s) => acc + (s.totalRecharge || 0), 0);
+    const totalCommissionSum = Object.values(myCommissionMap).reduce((acc, c) => acc + (c || 0), 0);
+
+    const summary = {
+      totalCommissionRate: totalRechargeSum > 0 ? ((totalCommissionSum / totalRechargeSum) * 100).toFixed(2) + "%" : "0%"
+    };
+
+    res.json({ success: true, data: { summary, teams: overview } });
+
   } catch (err) {
     console.error("Overview Error:", err);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
+
+module.exports = { getTeamOverview };
+
+module.exports = { getTeamOverview };
 
 module.exports = {
   createTeam,
